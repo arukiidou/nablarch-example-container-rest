@@ -1,0 +1,464 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.nablarch.archetype</groupId>
+    <artifactId>nablarch-archetype-parent</artifactId>
+    <version>6u3</version>
+  </parent>
+
+  <artifactId>rest</artifactId>
+
+  <groupId>com.example</groupId>
+  <version>0.0.1</version>
+  <packaging>war</packaging>
+
+  <!--
+   ライセンス、開発者やSCMといったプロジェクト自身に関する情報は、親pomの情報を
+   引き継がないように空の値で上書きしている。
+   これらの値は、必要に応じてプロジェクトで変更すること。
+  -->
+  <licenses>
+    <license />
+  </licenses>
+  <developers>
+    <developer />
+  </developers>
+  <scm>
+  </scm>
+
+  <properties>
+    <!-- ソース及びclassファイルが準拠するJavaのバージョン-->
+    <java.version>17</java.version>
+
+    <!-- gsp-dba-maven-pluginが使用するデータベース設定 -->
+    <nablarch.db.jdbcDriver>org.h2.Driver</nablarch.db.jdbcDriver>
+    <nablarch.db.url>jdbc:h2:./h2/db/SAMPLE</nablarch.db.url>
+    <nablarch.db.adminUser>SAMPLE</nablarch.db.adminUser>
+    <nablarch.db.adminPassword>SAMPLE</nablarch.db.adminPassword>
+    <nablarch.db.user>SAMPLE</nablarch.db.user>
+    <nablarch.db.password>SAMPLE</nablarch.db.password>
+    <nablarch.db.schema>PUBLIC</nablarch.db.schema>
+    <!--
+     JIBでDockerコンテナを作るときのベースイメージを指定する。
+     ブランクプロジェクトではイメージをタグで指定しているが、この場合、指定したイメージの最新バージョンが選択される。
+     検証時と異なるバージョンが選択された場合、アプリケーションの動作に影響が出る可能性があるので、
+     プロジェクトにおける検証が完了した段階で、バージョンを固定するために、イメージをダイジェストで指定することを推奨する。
+    -->
+    <jib.from.image>tomcat:10.1.34-jdk17-temurin</jib.from.image>
+  </properties>
+
+  <!--
+    このプロファイルは環境を指定するものであり、相互に排他的である。
+    複数のプロファイルを同時に指定してはならない。
+  -->
+  <profiles>
+    <!--
+    Nablarchのマスタデータ復旧機能用にデータを格納する際に使用するプロファイル。
+    使用の際は、以下を参照すること。
+    https://github.com/coastland/gsp-dba-maven-plugin/blob/master/recipe/backupToDifferentSchema.md
+
+    gsp-dba-pluginでは、H2の場合はデフォルトスキーマのPUBLICしか扱えないためバックアップスキーマ名にPUBLICを指定しています。
+    gsp-dba-pluginで任意のスキーマ名を指定出来るDBの場合は、バックアップスキーマ名を指定して下さい。
+    -->
+    <profile>
+      <id>BACKUP</id>
+      <properties>
+        <nablarch.db.schema>PUBLIC</nablarch.db.schema>
+      </properties>
+      <build>
+        <directory>${dba.gsp-target-dir}</directory>
+        <plugins>
+          <plugin>
+            <groupId>jp.co.tis.gsp</groupId>
+            <artifactId>gsp-dba-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>default-cli</id>
+                <phase>generate-resources</phase>
+                <goals>
+                  <goal>generate-ddl</goal>
+                  <goal>execute-ddl</goal>
+                  <goal>load-data</goal>
+                </goals>
+              </execution>
+            </executions>
+            <dependencies>
+              <!-- プロジェクトで使用するDB製品にあわせたJDBCドライバに上書きする -->
+              <dependency>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>2.2.220</version>
+                <scope>runtime</scope>
+              </dependency>
+            </dependencies>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!-- gsp-dba-plugin -->
+    <profile>
+      <id>gsp</id>
+      <activation>
+      </activation>
+      <build>
+        <directory>${dba.gsp-target-dir}</directory>
+        <plugins>
+          <plugin>
+            <groupId>jp.co.tis.gsp</groupId>
+            <artifactId>gsp-dba-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>default-cli</id>
+                <phase>generate-resources</phase>
+                <goals>
+                  <goal>generate-ddl</goal>
+                  <goal>execute-ddl</goal>
+                  <goal>generate-entity</goal>
+                  <goal>load-data</goal>
+                  <goal>export-schema</goal>
+                </goals>
+              </execution>
+            </executions>
+            <dependencies>
+              <!-- プロジェクトで使用するDB製品にあわせたJDBCドライバに上書きする -->
+              <dependency>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>2.2.220</version>
+                <scope>runtime</scope>
+              </dependency>
+            </dependencies>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-install-plugin</artifactId>
+            <executions>
+              <!-- gsp-dba-maven-pluginで生成したdumpファイルをinstallするための設定 -->
+              <execution>
+                <id>default-cli</id>
+                <goals>
+                  <goal>install-file</goal>
+                </goals>
+                <configuration>
+                  <file>${dba.gsp-target-dir}/output/${dba.testDataArtifactId}-${dba.dump.version}.jar</file>
+                  <groupId>${project.groupId}</groupId>
+                  <version>${dba.dump.version}</version>
+                  <artifactId>${dba.testDataArtifactId}</artifactId>
+                  <packaging>jar</packaging>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <executions>
+              <!-- gsp-dba-maven-pluginで生成したdumpファイルをdeployするための設定 -->
+              <execution>
+                <id>default-cli</id>
+                <goals>
+                  <goal>deploy-file</goal>
+                </goals>
+                <configuration>
+                  <file>${dba.gsp-target-dir}/output/${dba.testDataArtifactId}-${dba.dump.version}.jar</file>
+                  <groupId>${project.groupId}</groupId>
+                  <version>${dba.dump.version}</version>
+                  <artifactId>${dba.testDataArtifactId}</artifactId>
+                  <repositoryId>${project.distributionManagement.repository.id}</repositoryId>
+                  <url>${project.distributionManagement.repository.url}</url>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.nablarch.profile</groupId>
+        <artifactId>nablarch-bom</artifactId>
+        <version>6u3</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>5.11.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>jakarta.platform</groupId>
+        <artifactId>jakarta.jakartaee-bom</artifactId>
+        <version>10.0.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>2.0.11</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+
+  <dependencies>
+    <dependency>
+      <groupId>com.nablarch.configuration</groupId>
+      <artifactId>nablarch-main-default-configuration</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.nablarch.framework</groupId>
+      <artifactId>nablarch-testing-rest</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.nablarch.framework</groupId>
+      <artifactId>nablarch-testing-jetty12</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.nablarch.configuration</groupId>
+      <artifactId>nablarch-testing-default-configuration</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- JUnit5 でテスティングフレームワークを実行するために必要なライブラリ(ここから) -->
+    <dependency>
+      <groupId>com.nablarch.framework</groupId>
+      <artifactId>nablarch-testing-junit5</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- JUnit5 でテスティングフレームワークを実行するために必要なライブラリ(ここまで) -->
+
+    <dependency>
+      <groupId>com.nablarch.framework</groupId>
+      <artifactId>nablarch-fw-jaxrs</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.nablarch.integration</groupId>
+      <artifactId>nablarch-jersey-adaptor</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.nablarch.integration</groupId>
+      <artifactId>nablarch-router-adaptor</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.nablarch.framework</groupId>
+      <artifactId>nablarch-fw-web</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.nablarch.framework</groupId>
+      <artifactId>nablarch-core-validation-ee</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.nablarch.framework</groupId>
+      <artifactId>nablarch-core-beans</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.nablarch.framework</groupId>
+      <artifactId>nablarch-common-jdbc</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.nablarch.framework</groupId>
+      <artifactId>nablarch-common-dao</artifactId>
+    </dependency>
+
+    <!-- コード管理機能 -->
+    <dependency>
+      <groupId>com.nablarch.framework</groupId>
+      <artifactId>nablarch-common-code-jdbc</artifactId>
+    </dependency>
+    <!-- UniversalDao使用時、DBに自動採番型が存在しない場合に使用するモジュールが存在している。 -->
+    <dependency>
+      <groupId>com.nablarch.framework</groupId>
+      <artifactId>nablarch-common-idgenerator-jdbc</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>jakarta.annotation</groupId>
+      <artifactId>jakarta.annotation-api</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>jakarta.ws.rs</groupId>
+      <artifactId>jakarta.ws.rs-api</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.17.1</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.hibernate.validator</groupId>
+      <artifactId>hibernate-validator</artifactId>
+      <version>8.0.0.Final</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- TODO: プロジェクトで使用するDB製品にあわせたJDBCドライバに修正してください。 -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <version>2.2.220</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.zaxxer</groupId>
+      <artifactId>HikariCP</artifactId>
+      <version>3.3.1</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.nablarch.integration</groupId>
+      <artifactId>slf4j-nablarch-adaptor</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- Nablarchのテスティングフレームワークを実行するために必要なライブラリ -->
+    <dependency>
+      <groupId>com.nablarch.framework</groupId>
+      <artifactId>nablarch-fw-batch</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.nablarch.framework</groupId>
+      <artifactId>nablarch-fw-messaging</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.nablarch.framework</groupId>
+      <artifactId>nablarch-fw-messaging-http</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- ================ここから任意で使用するアサートライブラリの設定================ -->
+    <!--  TODO PJ要件に合わせてアサートライブラリを選定してください。  -->
+    <!--  JSONをアサートするライブラリ  -->
+    <dependency>
+      <groupId>org.skyscreamer</groupId>
+      <artifactId>jsonassert</artifactId>
+      <version>1.5.3</version>
+      <scope>test</scope>
+    </dependency>
+    <!--  JSONPath形式でのアサートに使用するライブラリ  -->
+    <dependency>
+      <groupId>com.jayway.jsonpath</groupId>
+      <artifactId>json-path-assert</artifactId>
+      <version>2.9.0</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!--  XMLをアサートするライブラリ  -->
+    <dependency>
+      <groupId>org.xmlunit</groupId>
+      <artifactId>xmlunit-core</artifactId>
+      <version>2.10.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.xmlunit</groupId>
+      <artifactId>xmlunit-matchers</artifactId>
+      <version>2.10.0</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- ================ここまで任意で使用するツールの設定================ -->
+
+  </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>src/main/java</directory>
+        <includes>
+          <include>**/*.sql</include>
+        </includes>
+      </resource>
+    </resources>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <useManifestOnlyJar>false</useManifestOnlyJar>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.eclipse.jetty.ee10</groupId>
+        <artifactId>jetty-ee10-maven-plugin</artifactId>
+        <configuration>
+          <httpConnector>
+            <port>9080</port>
+          </httpConnector>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-war-plugin</artifactId>
+        <configuration>
+          <webXml>${webxml.path}</webXml>
+        </configuration>
+      </plugin>
+      <!-- Dockerコンテナ化 -->
+      <plugin>
+        <groupId>com.google.cloud.tools</groupId>
+        <artifactId>jib-maven-plugin</artifactId>
+        <configuration>
+          <container>
+            <appRoot>/usr/local/tomcat/webapps/ROOT</appRoot>
+            <ports>
+              <port>8080</port>
+            </ports>
+          </container>
+        </configuration>
+      </plugin>
+      <!-- ================ここから任意で使用するツールの設定================ -->
+      <!-- gsp-dba-maven-pluginで自動生成したソースをビルド時に使用するための設定 -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+      </plugin>
+      <!-- カバレッジ取得 -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+      </plugin>
+      <!-- SpotBugs -->
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+      </plugin>
+      <!-- ================ここまで任意で使用するツールの設定================ -->
+    </plugins>
+  </build>
+</project>
