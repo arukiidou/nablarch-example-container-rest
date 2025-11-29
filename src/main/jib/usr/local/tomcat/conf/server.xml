@@ -150,8 +150,10 @@
              Note: The pattern used is equivalent to using pattern="common" -->
         <!-- directory="/proc/self/fd" prefix="1" は、アクセスログの出力先を標準出力にするための設定です
              参考: https://github.com/docker-library/tomcat/issues/84 -->
-        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="/proc/self/fd"
-               prefix="1" rotatable="false"
+             
+        <!-- <Valve className="org.apache.catalina.valves.AccessLogValve" directory="/proc/self/fd" -->
+        <Valve className="org.apache.catalina.valves.JsonAccessLogValve" directory="/dev"
+               prefix="stdout" rotatable="false"
                pattern="%h %l %u %t &quot;%r&quot; %s %b" />
 
       </Host>

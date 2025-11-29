@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:18.1
+    container_name: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      POSTGRES_DB: "rest_example"
+  example-rest:
+    image: example-rest:0.0.1
+    container_name: example-rest
+    restart: always
+    ports:
+      - "8080:8080"
+    tty: true
+    # ★ログの監視用設定
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224

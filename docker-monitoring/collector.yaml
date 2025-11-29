@@ -1,0 +1,24 @@
+receivers:
+  fluentforward:
+    endpoint: 0.0.0.0:24224
+processors:
+  batch:
+  transform:
+    error_mode: ignore
+    log_statements:
+      - set(resource.attributes["container.name"], log.attributes["container_name"])
+      - set(resource.attributes["service.name"], "otelcol-docker")
+exporters:
+  otlp:
+    endpoint: http://lgtm:4317
+    tls:
+      insecure: true
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    logs:
+      receivers: [fluentforward]
+      processors: [transform, batch]
+      exporters: [debug, otlp]

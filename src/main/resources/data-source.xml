@@ -8,7 +8,9 @@
 
   <!-- ダイアレクト設定 -->
   <!-- TODO:使用するDBに合わせてダイアレクトを設定すること -->
-  <component name="dialect" class="nablarch.core.db.dialect.H2Dialect" />
+  <component name="dialect" class="nablarch.core.db.dialect.PostgreSQLDialect" />
+  <!-- nablarch.db.dialect=nablarch.core.db.dialect.H2Dialect -->
+  <!-- <component name="dialect" class="${nablarch.db.dialect}" /> -->
 
   <!-- データソース設定 -->
   <!-- TODO: プロジェクトで使用するDB製品にあわせた定義を設定してください。 -->
