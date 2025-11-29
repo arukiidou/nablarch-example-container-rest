@@ -1,0 +1,27 @@
+# 監視用サービス。
+services:
+  receiver:
+    image:  otel/opentelemetry-collector-k8s:0.140.1
+    command: ["--config=/etc/otel/config.yaml"]
+    restart: always
+    tty: true
+    configs:
+      - source: collector
+        target: /etc/otel/config.yaml
+    ports:
+      - "24224:24224"
+  
+  lgtm:
+    image: grafana/otel-lgtm:0.11.18
+    container_name: lgtm
+    restart: always
+    tty: true
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "3000:3000"
+
+configs:
+  collector:
+    file: ./collector.yaml
+
