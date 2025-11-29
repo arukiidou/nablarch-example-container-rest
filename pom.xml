@@ -47,7 +47,15 @@
      プロジェクトにおける検証が完了した段階で、バージョンを固定するために、イメージをダイジェストで指定することを推奨する。
     -->
     <jib.from.image>tomcat:10.1.34-jdk21-temurin</jib.from.image>
-    <jib.to.image>example-rest:0.0.2</jib.to.image>
+    <jib.to.image>example-rest:0.0.4</jib.to.image>
+    
+    <!-- agents will be extracted relative to this build location -->
+    <agent-extraction-root>${project.build.directory}/jib-agents</agent-extraction-root>
+    <edot-agent-version>1.7.0</edot-agent-version>
+    <edot-agent-file>elastic-otel-javaagent-${edot-agent-version}.jar</edot-agent-file>
+
+    <!-- where to place the Stackdriver Debugger Java Agent in the container -->
+    <edot-agent-location>/</edot-agent-location>
   </properties>
 
   <!--
@@ -207,6 +215,21 @@
         <artifactId>slf4j-api</artifactId>
         <version>2.0.11</version>
       </dependency>
+      <!-- https://mvnrepository.com/artifact/io.opentelemetry/opentelemetry-bom -->
+      <dependency>
+          <groupId>io.opentelemetry</groupId>
+          <artifactId>opentelemetry-bom</artifactId>
+          <version>1.55.0</version>
+          <type>pom</type>
+          <scope>import</scope>
+      </dependency>
+      <dependency>
+          <groupId>io.opentelemetry.instrumentation</groupId>
+          <artifactId>opentelemetry-instrumentation-bom</artifactId>
+          <version>2.21.0</version>
+          <type>pom</type>
+          <scope>import</scope>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -359,6 +382,21 @@
       <scope>test</scope>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/co.elastic.otel/elastic-otel-javaagent -->
+    <dependency>
+        <groupId>co.elastic.otel</groupId>
+        <artifactId>elastic-otel-javaagent</artifactId>
+        <version>1.7.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry.instrumentation</groupId>
+      <artifactId>opentelemetry-instrumentation-annotations</artifactId>
+    </dependency>
+
     <!-- ================ここから任意で使用するアサートライブラリの設定================ -->
     <!--  TODO PJ要件に合わせてアサートライブラリを選定してください。  -->
     <!--  JSONをアサートするライブラリ  -->
@@ -429,16 +467,53 @@
           <webXml>${webxml.path}</webXml>
         </configuration>
       </plugin>
+      <!-- Javaagent -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.9.0</version>
+        <executions>
+          <execution>
+            <id>copy-javaagent</id>
+            <phase>package</phase>
+            <goals>
+              <goal>copy</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <artifactItems>
+            <artifactItem>
+              <groupId>co.elastic.otel</groupId>
+              <artifactId>elastic-otel-javaagent</artifactId>
+              <version>${edot-agent-version}</version>
+              <type>jar</type>
+              <overWrite>true</overWrite>
+              <outputDirectory>${project.build.directory}/jib-agents</outputDirectory>
+              <destFileName>elastic-otel-javaagent-${edot-agent-version}.jar</destFileName>
+            </artifactItem>
+          </artifactItems>
+          <outputDirectory>${project.build.directory}/jib-agents</outputDirectory>
+          <overWriteReleases>true</overWriteReleases>
+          <overWriteSnapshots>true</overWriteSnapshots>
+        </configuration>
+      </plugin>
       <!-- Dockerコンテナ化 -->
       <plugin>
         <groupId>com.google.cloud.tools</groupId>
         <artifactId>jib-maven-plugin</artifactId>
         <configuration>
+          <extraDirectories>
+            <paths>${agent-extraction-root}</paths>
+          </extraDirectories>
           <container>
             <appRoot>/usr/local/tomcat/webapps/ROOT</appRoot>
             <ports>
               <port>8080</port>
             </ports>
+            <jvmFlags>
+              <jvmFlag>-javaagent:/${edot-agent-file}</jvmFlag>
+            </jvmFlags>
           </container>
         </configuration>
       </plugin>

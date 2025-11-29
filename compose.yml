@@ -9,15 +9,28 @@ services:
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "postgres"
       POSTGRES_DB: "rest_example"
+    networks:
+      - monitoring_
   example-rest:
-    image: example-rest:0.0.1
+    image: example-rest:0.0.4
     container_name: example-rest
     restart: always
     ports:
       - "8080:8080"
     tty: true
+    environment:
+      - JAVA_TOOL_OPTIONS=-javaagent:/elastic-otel-javaagent-1.7.0.jar
+      - OTEL_SERVICE_NAME=example-rest
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4318
+      - OTEL_EXPORTER_OTLP_INSECURE=true
     # ★ログの監視用設定
     logging:
       driver: "fluentd"
       options:
         fluentd-address: localhost:24224
+    networks:
+      - monitoring_
+networks:
+  monitoring_:
+    name: monitoring_
+    external: true

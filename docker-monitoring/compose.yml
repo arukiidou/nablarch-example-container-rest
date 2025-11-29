@@ -24,4 +24,6 @@ services:
 configs:
   collector:
     file: ./collector.yaml
-
+networks:
+  monitoring_:
+    name: monitoring_

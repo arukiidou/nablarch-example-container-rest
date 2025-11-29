@@ -2,6 +2,9 @@ package com.example;
 
 import com.example.dto.SampleUserListDto;
 import com.example.entity.SampleUser;
+
+import io.opentelemetry.instrumentation.annotations.SpanAttribute;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import nablarch.common.dao.EntityList;
 import nablarch.common.dao.UniversalDao;
 import nablarch.fw.web.HttpRequest;
@@ -32,6 +35,18 @@ public class SampleAction {
     @Path("/json")
     @Produces(MediaType.APPLICATION_JSON)
     public EntityList<SampleUser> findProducesJson(HttpRequest req) {
+        EntityList<SampleUser> sampleUserList = findUser();
+        getCount(sampleUserList.size());
+        return sampleUserList;
+    }
+
+    @WithSpan
+    private int getCount(@SpanAttribute("usercount") int size) {
+        return size;
+    }
+
+    @WithSpan
+    private EntityList<SampleUser> findUser() {
         return UniversalDao.findAll(SampleUser.class);
     }
 
@@ -48,7 +63,7 @@ public class SampleAction {
     @Path("/xml")
     @Produces(MediaType.APPLICATION_XML)
     public SampleUserListDto findProducesXml(HttpRequest req) {
-        EntityList<SampleUser> sampleUserList = UniversalDao.findAll(SampleUser.class);
+        EntityList<SampleUser> sampleUserList = findUser();
         return new SampleUserListDto(sampleUserList);
     }
 
