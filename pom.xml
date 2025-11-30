@@ -47,7 +47,7 @@
      プロジェクトにおける検証が完了した段階で、バージョンを固定するために、イメージをダイジェストで指定することを推奨する。
     -->
     <jib.from.image>tomcat:10.1.34-jdk21-temurin</jib.from.image>
-    <jib.to.image>example-rest:0.0.4</jib.to.image>
+    <jib.to.image>example-rest:0.0.12</jib.to.image>
     
     <!-- agents will be extracted relative to this build location -->
     <agent-extraction-root>${project.build.directory}/jib-agents</agent-extraction-root>
@@ -230,6 +230,13 @@
           <type>pom</type>
           <scope>import</scope>
       </dependency>
+      <dependency>
+          <groupId>io.opentelemetry.instrumentation</groupId>
+          <artifactId>opentelemetry-instrumentation-bom-alpha</artifactId>
+          <version>2.21.0-alpha</version>
+          <type>pom</type>
+          <scope>import</scope>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -382,19 +389,43 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- https://mvnrepository.com/artifact/co.elastic.otel/elastic-otel-javaagent -->
-    <dependency>
-        <groupId>co.elastic.otel</groupId>
-        <artifactId>elastic-otel-javaagent</artifactId>
-        <version>1.7.0</version>
-    </dependency>
+    <!-- Opentelemetry計測用ライブラリの宣言(JavaAgent前提) -->
     <dependency>
       <groupId>io.opentelemetry</groupId>
       <artifactId>opentelemetry-api</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-context</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.opentelemetry.instrumentation</groupId>
       <artifactId>opentelemetry-instrumentation-annotations</artifactId>
+    </dependency>
+    <!-- Opentelemetry計測用ライブラリの宣言 -->
+    <dependency>
+      <groupId>io.opentelemetry.instrumentation</groupId>
+      <artifactId>opentelemetry-java-http-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry.javaagent.instrumentation</groupId>
+      <artifactId>opentelemetry-javaagent-jaxrs-3.0-jersey-3.0</artifactId>
+    </dependency>
+    <!-- jarseyクライアントの宣言 -->
+    <dependency>
+        <groupId>org.glassfish.jersey.core</groupId>
+        <artifactId>jersey-client</artifactId>
+        <version>3.1.11</version>
+    </dependency>
+    <dependency>
+        <groupId>org.glassfish.jersey.inject</groupId>
+        <artifactId>jersey-hk2</artifactId>
+        <version>3.1.11</version>
+    </dependency>
+    <dependency>
+        <groupId>org.glassfish.jersey.media</groupId>
+        <artifactId>jersey-media-json-jackson</artifactId>
+        <version>3.1.11</version>
     </dependency>
 
     <!-- ================ここから任意で使用するアサートライブラリの設定================ -->
@@ -497,6 +528,14 @@
           <overWriteReleases>true</overWriteReleases>
           <overWriteSnapshots>true</overWriteSnapshots>
         </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>co.elastic.otel</groupId>
+            <artifactId>elastic-otel-javaagent</artifactId>
+            <version>1.7.0</version>
+            <scope>runtime</scope>
+          </dependency>
+        </dependencies>
       </plugin>
       <!-- Dockerコンテナ化 -->
       <plugin>
