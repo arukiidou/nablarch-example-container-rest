@@ -12,7 +12,7 @@ services:
     networks:
       - monitoring_
   example-rest:
-    image: example-rest:0.0.4
+    image: example-rest:0.0.6
     container_name: example-rest
     restart: always
     ports:

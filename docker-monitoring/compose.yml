@@ -10,16 +10,21 @@ services:
         target: /etc/otel/config.yaml
     ports:
       - "24224:24224"
-  
+    networks:
+      - monitoring_
+
   lgtm:
     image: grafana/otel-lgtm:0.11.18
     container_name: lgtm
     restart: always
     tty: true
-    ports:
+    expose:
       - "4317:4317"
       - "4318:4318"
+    ports:
       - "3000:3000"
+    networks:
+      - monitoring_
 
 configs:
   collector:
@@ -27,3 +32,4 @@ configs:
 networks:
   monitoring_:
     name: monitoring_
+    external: true #既に存在する場合は、external: trueにしてください。
