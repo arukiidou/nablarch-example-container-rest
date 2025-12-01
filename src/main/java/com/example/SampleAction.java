@@ -1,9 +1,19 @@
 package com.example;
 
+import java.util.Map;
+
 import com.example.dto.SampleUserListDto;
 import com.example.entity.SampleUser;
+
+import io.opentelemetry.instrumentation.annotations.SpanAttribute;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanContext;
+import io.opentelemetry.context.Context;
 import nablarch.common.dao.EntityList;
 import nablarch.common.dao.UniversalDao;
+import nablarch.core.log.Logger;
+import nablarch.core.log.LoggerManager;
 import nablarch.fw.web.HttpRequest;
 
 import jakarta.ws.rs.GET;
@@ -19,6 +29,8 @@ import jakarta.ws.rs.core.MediaType;
 @Path("/find")
 public class SampleAction {
 
+    private static final Logger LOGGER = LoggerManager.get(SampleAction.class);
+
     /**
      * 検索処理。
      * <p>
@@ -32,6 +44,29 @@ public class SampleAction {
     @Path("/json")
     @Produces(MediaType.APPLICATION_JSON)
     public EntityList<SampleUser> findProducesJson(HttpRequest req) {
+        EntityList<SampleUser> sampleUserList = findUser();
+        getCount(sampleUserList.size());
+        return sampleUserList;
+    }
+
+    @WithSpan
+    private int getCount(@SpanAttribute("userCount") int userCount) {
+        SpanContext ctx = Span.fromContext(Context.current()).getSpanContext();
+        LOGGER.logInfo("Trace ID Test", Map.of(
+            "traceId", ctx.getTraceId(),
+            "spanId", ctx.getSpanId(),
+            "userCount", userCount
+        ));
+        return userCount;
+    }
+
+    @WithSpan
+    private EntityList<SampleUser> findUser() {
+        SpanContext ctx = Span.fromContext(Context.current()).getSpanContext();
+        LOGGER.logInfo("Trace ID Test_2", Map.of(
+            "traceId", ctx.getTraceId(),
+            "spanId", ctx.getSpanId()
+        ));
         return UniversalDao.findAll(SampleUser.class);
     }
 
@@ -48,7 +83,7 @@ public class SampleAction {
     @Path("/xml")
     @Produces(MediaType.APPLICATION_XML)
     public SampleUserListDto findProducesXml(HttpRequest req) {
-        EntityList<SampleUser> sampleUserList = UniversalDao.findAll(SampleUser.class);
+        EntityList<SampleUser> sampleUserList = findUser();
         return new SampleUserListDto(sampleUserList);
     }
 

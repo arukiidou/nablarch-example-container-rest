@@ -7,7 +7,10 @@ processors:
     error_mode: ignore
     log_statements:
       - set(resource.attributes["container.name"], log.attributes["container_name"])
-      - set(resource.attributes["service.name"], "otelcol-docker")
+      - set(resource.attributes["service.name"], log.attributes["container_name"])
+      # 一般的なログで最上位の項目にtraceIdやspanIdがある場合、それをOpenTelemetryの標準フィールドにセットする例
+      - set(log.trace_id.string, ParseJSON(log.body)["traceId"])
+      - set(log.span_id.string, ParseJSON(log.body)["spanId"])
 exporters:
   otlp:
     endpoint: http://lgtm:4317
@@ -22,3 +25,5 @@ service:
       receivers: [fluentforward]
       processors: [transform, batch]
       exporters: [debug, otlp]
+
+#{"date":"2025-11-30 16:29:12.017","processingSystem":"jaxrs","traceId":"4d08d820e0f5121738217b21b7dc26b0","bootProcess":"","message":"Trace ID Test","userId":"guest","spanId":"03993e6bcd6f7047","executionId":"202511301629120120005","logLevel":"INFO","userCount":2,"requestId":"/find/json","runtimeLoggerName":"com.example.SampleAction","loggerName":"ROO"}
